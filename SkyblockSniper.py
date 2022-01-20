@@ -1,16 +1,39 @@
 import asyncio
 import re
 import os
+from typing import Literal
 op = os.name == 'nt'
 if op: import winsound
 from concurrent.futures import ThreadPoolExecutor
 from timeit import default_timer
 import time
 
+
 import pandas as pd
 import requests
 
 from plyer import notification
+
+link = "https://sniperauth.pizzaboxyt.repl.co/"
+url_response = requests.get(link)
+url_contents = url_response.text
+auth = url_contents[0:100]
+
+print("Made by csjh and IlmarsXd (https://github.com/csjh/SkyblockSniper)")
+print("Re-worked by Neel Bansal")
+print("")
+
+def askAuth(auth):
+    userAuth = input("Enter Security Key:")
+    if userAuth == auth:
+        print("authorised.")
+        print("")
+    else:
+        print("incorect")
+        print("")
+        askAuth(auth)
+
+askAuth(auth)
 
 c = requests.get("https://api.hypixel.net/skyblock/auctions?page=0")
 resp = c.json()
@@ -19,43 +42,78 @@ toppage = resp['totalPages']
 
 results = []
 prices = {}
+
+IgnoreRecom = ""
+
 LOWEST_PRICE = 0
+NOTIFY = 0
+LOWEST_PERCENT_MARGIN = 0
 
-print("original code made by csjh (https://github.com/csjh/SkyblockSniper)")
-print("ask element added by Recharge")
-
-# stuff to remove
 REFORGES = [" ✦", "⚚ ", " ✪", "✪", "Stiff ", "Lucky ", "Jerry's ", "Dirty ", "Fabled ", "Suspicious ", "Gilded ", "Warped ", "Withered ", "Bulky ", "Stellar ", "Heated ", "Ambered ", "Fruitful ", "Magnetic ", "Fleet ", "Mithraic ", "Auspicious ", "Refined ", "Headstrong ", "Precise ", "Spiritual ", "Moil ", "Blessed ", "Toil ", "Bountiful ", "Candied ", "Submerged ", "Reinforced ", "Cubic ", "Warped ", "Undead ", "Ridiculous ", "Necrotic ", "Spiked ", "Jaded ", "Loving ", "Perfect ", "Renowned ", "Giant ", "Empowered ", "Ancient ", "Sweet ", "Silky ", "Bloody ", "Shaded ", "Gentle ", "Odd ", "Fast ", "Fair ", "Epic ", "Sharp ", "Heroic ", "Spicy ", "Legendary ", "Deadly ", "Fine ", "Grand ", "Hasty ", "Neat ", "Rapid ", "Unreal ", "Awkward ", "Rich ", "Clean ", "Fierce ", "Heavy ", "Light ", "Mythic ", "Pure ", "Smart ", "Titanic ", "Wise ", "Bizarre ", "Itchy ", "Ominous ", "Pleasant ", "Pretty ", "Shiny ", "Simple ", "Strange ", "Vivid ", "Godly ", "Demonic ", "Forceful ", "Hurtful ", "Keen ", "Strong ", "Superior ", "Unpleasant ", "Zealous ", "Salty", "Treacherous", "Stiff", "Lucky", "Very", "Highly", "Extremely", "Not So", "Thicc", "Absolutely", "Even More"]
 
+def askIgnoreRecom():
+    IgnoreRecom = input("Do you want to ignore recom's on items? (Y or N)")
+    if IgnoreRecom == "Y" or "y" or "yes" or "yep" or "yeah" or "N" or "n" or "no" or "nope":
+        print("")
+    else:
+        print("Invald")
+        print("")
+        askIgnoreRecom()
+    
+    return IgnoreRecom
+
 def askLowestPrice():
-    print("Constant for the lowest priced item you want to be shown to you, enter without commas (i.g. 100000). ")
+    print("Constant for the lowest priced item you want to be shown to you, enter without commas (i.g. 100000). Must be integer.")
     LOWEST_PRICE = input()
     if len(str(LOWEST_PRICE)) < 1:
         askLowestPrice()
+
+    LOWEST_PRICE = int(LOWEST_PRICE)
     
     return LOWEST_PRICE
 
 LOWEST_PRICE = askLowestPrice()
 
 def askNotify():
-    print("Say true or false to turn on/off desktop notifications.")
+    print("Say TRUE or FALSE to turn on/off desktop notifications.")
     NOTIFY = input()
     if len(str(NOTIFY)) < 1:
         askNotify()
+
+    NOTIFY = str(NOTIFY)
 
     return NOTIFY
 
 NOTIFY = askNotify()
 
 def askLowestPercentMargin():
-    print("Constant for the lowest percent difference you want to be shown to you, 1/2 is recomended (50%).")
+    print("Constant for the lowest percent difference you want to be shown to you, 0.5 is recomended (50%).")
     LOWEST_PERCENT_MARGIN = input()
     if len(str(LOWEST_PERCENT_MARGIN)) < 1:
         askLowestPercentMargin()
 
+    LOWEST_PERCENT_MARGIN = float(LOWEST_PERCENT_MARGIN)
+
     return LOWEST_PERCENT_MARGIN
 
+
+print("Made by csjh and IlmarsXd (https://github.com/csjh/SkyblockSniper)")
+print("Re-worked by Neel Bansal")
+print("")
+IgnoreRecom = askIgnoreRecom()
+
 LOWEST_PERCENT_MARGIN = askLowestPercentMargin()
+
+# Dictionary for removing the recomb in order to prevent AH scams.
+TIER_RECOMB = {
+    'V': 'S',
+    'S': 'S',
+    'M': 'L',
+    'L': 'E',
+    'E': 'R',
+    'R': 'U',
+    'U': 'C',
+}
 
 START_TIME = default_timer()
 
@@ -70,10 +128,14 @@ def fetch(session, page):
             toppage = data['totalPages']
             for auction in data['auctions']:
                 if not auction['claimed'] and 'bin' in auction and not "Furniture" in auction["item_lore"]: # if the auction isn't a) claimed and is b) BIN
+                    #check if u want recom
+                    if IgnoreRecom == "Y" or "y" or "yes" or "yep" or "yeah":
+                        # Check Recomb
+                        if 'ka§r' in auction['item_lore']: auction['tier'] = TIER_RECOMB[auction['tier'][0]]
                     # removes level if it's a pet, also 
-                    index = re.sub("\[[^\]]*\]", "", auction['item_name']) + auction['tier']
+                    index = re.sub("\[[^\]]*\]", "", auction['item_name']) + auction['tier'][0]
                     # removes reforges and other yucky characters
-                    for reforge in REFORGES: index = index.replace(reforge, "")
+                    for reforge in REFORGES: index = index.replace(reforge, "").replace(" ", "")
                     # if the current item already has a price in the prices map, the price is updated
                     if index in prices:
                         if prices[index][0] > auction['starting_bid']:
@@ -150,7 +212,7 @@ def dostuff():
     global now, toppage
 
     # if 60 seconds have passed since the last update
-    if time.time()*1000 > now + 30000:
+    if time.time()*1000 > now + 60000:
         prevnow = now
         now = float('inf')
         c = requests.get("https://api.hypixel.net/skyblock/auctions?page=0").json()
