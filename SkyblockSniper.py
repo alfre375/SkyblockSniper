@@ -14,7 +14,7 @@ import requests
 
 from plyer import notification
 
-link = "https://sniperauth.pizzaboxyt.repl.co/"
+link = "FILL HERE"
 url_response = requests.get(link)
 url_contents = url_response.text
 auth = url_contents[0:100]
